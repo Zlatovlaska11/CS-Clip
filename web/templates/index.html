@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>cs-clip</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #09090b;
+  --panel:    #111113;
+  --surface:  #18181b;
+  --surface2: #1f1f23;
+  --border:   #27272a;
+  --border2:  #3f3f46;
+  --text:     #fafafa;
+  --muted:    #71717a;
+  --dim:      #52525b;
+  --accent:   #3b82f6;
+  --accent-bg:#1d3557;
+  --green:    #22c55e;
+  --amber:    #f59e0b;
+  --red:      #ef4444;
+  --mono:     ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+  --r:        6px;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── layout ── */
+.app {
+  display: grid;
+  grid-template-rows: 44px 1fr;
+  grid-template-columns: 220px 1fr;
+  height: 100vh;
+}
+
+/* ── header ── */
+header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.wordmark {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.wordmark span { color: var(--accent); }
+
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-left: auto;
+  box-shadow: 0 0 6px var(--green);
+}
+
+.dot-label { font-size: 12px; color: var(--muted); }
+
+/* ── sidebar ── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-title {
+  padding: 14px 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.demo-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 6px 8px;
+}
+
+.demo-list::-webkit-scrollbar { width: 4px; }
+.demo-list::-webkit-scrollbar-track { background: transparent; }
+.demo-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.demo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: background 100ms;
+  border: 1px solid transparent;
+}
+
+.demo-item:hover { background: var(--surface); }
+
+.demo-item.active {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+
+.demo-name {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.demo-meta {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.sidebar-empty {
+  padding: 16px 14px;
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* ── main ── */
+.main {
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-track { background: transparent; }
+.main::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── empty state ── */
+.empty-state {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--dim);
+  user-select: none;
+}
+
+.empty-icon {
+  font-size: 32px;
+  opacity: 0.4;
+}
+
+.empty-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.empty-sub {
+  font-size: 12px;
+}
+
+/* ── loading ── */
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  padding: 40px 0;
+}
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── demo header ── */
+.demo-header {
+  margin-bottom: 24px;
+}
+
+.demo-header-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.demo-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* ── section header ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.section-count {
+  font-size: 11px;
+  color: var(--dim);
+  font-family: var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+/* ── highlight card ── */
+.highlights { display: flex; flex-direction: column; gap: 10px; }
+
+.hl-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color 150ms;
+}
+
+.hl-card:hover { border-color: var(--border2); }
+
+.hl-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.kill-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  border-radius: var(--r);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+
+.badge-2k { background: rgba(113,113,122,0.2); color: #a1a1aa; border: 1px solid #3f3f46; }
+.badge-3k { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+.badge-4k { background: rgba(59,130,246,0.15); color: var(--accent); border: 1px solid rgba(59,130,246,0.3); }
+.badge-5k { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+
+.hl-info { flex: 1; min-width: 0; }
+
+.hl-player {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hl-ticks {
+  font-size: 11px;
+  color: var(--dim);
+  font-family: var(--mono);
+  margin-top: 1px;
+}
+
+.hl-actions { flex-shrink: 0; }
+
+/* ── kill feed ── */
+.hl-feed {
+  border-top: 1px solid var(--border);
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.kill-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.kill-killer { color: var(--text); font-weight: 500; }
+.kill-arrow { color: var(--border2); }
+.kill-victim { color: var(--muted); }
+.kill-weapon {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.kill-hs {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--amber);
+  background: rgba(245,158,11,0.1);
+  border: 1px solid rgba(245,158,11,0.2);
+  padding: 0 4px;
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+/* ── no highlights ── */
+.no-highlights {
+  padding: 32px 0;
+  color: var(--dim);
+  font-size: 13px;
+}
+
+/* ── clips section ── */
+.clips-section { margin-top: 32px; }
+
+.clip-list { display: flex; flex-direction: column; gap: 8px; }
+
+.clip-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+
+.clip-icon { color: var(--dim); font-size: 16px; flex-shrink: 0; }
+
+.clip-info { flex: 1; min-width: 0; }
+
+.clip-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+}
+
+.clip-size { font-size: 11px; color: var(--dim); font-family: var(--mono); }
+
+/* ── buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 100ms, border-color 100ms, opacity 100ms;
+  text-decoration: none;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: #2563eb; border-color: #2563eb; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border-color: var(--border);
+}
+.btn-ghost:hover { background: var(--surface); color: var(--text); border-color: var(--border2); }
+
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+.btn-download {
+  background: rgba(34,197,94,0.1);
+  color: var(--green);
+  border-color: rgba(34,197,94,0.2);
+}
+.btn-download:hover { background: rgba(34,197,94,0.2); }
+
+/* ── job status inline ── */
+.job-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.job-status .spinner { width: 12px; height: 12px; }
+
+.job-error { color: var(--red); }
+
+/* ── upload progress ── */
+.upload-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-bar {
+  width: 72px;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 80ms linear;
+  width: 0%;
+}
+
+.progress-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* ── divider ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ── sidebar upload button ── */
+.upload-demo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 0 6px 10px;
+  padding: 7px 10px;
+  border-radius: var(--r);
+  border: 1px dashed var(--border2);
+  font-size: 12px;
+  color: var(--dim);
+  cursor: pointer;
+  transition: border-color 100ms, color 100ms, background 100ms;
+  user-select: none;
+}
+.upload-demo-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(59,130,246,0.06);
+}
+
+/* ── drop overlay ── */
+.drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(9,9,11,0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  cursor: default;
+}
+.drop-overlay[hidden] { display: none; }
+
+.drop-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 52px 72px;
+  border: 1.5px dashed var(--border2);
+  border-radius: 14px;
+  pointer-events: none;
+  transition: border-color 120ms;
+  text-align: center;
+}
+.drop-box.hovering { border-color: var(--accent); }
+
+.drop-icon-lg { font-size: 32px; color: var(--dim); transition: color 120ms; }
+.drop-box.hovering .drop-icon-lg { color: var(--accent); }
+
+.drop-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.drop-sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.drop-progress-wrap {
+  width: 220px;
+  height: 3px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.drop-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 80ms linear;
+  width: 0%;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <span class="wordmark">cs<span>-</span>clip</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <span class="dot-label">localhost:8080</span>
+      <div class="dot"></div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="sidebar-title">Demos</div>
+    <label class="upload-demo-btn">
+      <input type="file" id="demo-file-input" accept=".dem" hidden>
+      ↑ Upload .dem
+    </label>
+    <div class="demo-list" id="demo-list">
+      <div class="sidebar-empty">Loading…</div>
+    </div>
+  </aside>
+
+  <div class="drop-overlay" id="drop-overlay" hidden>
+    <div class="drop-box" id="drop-box">
+      <div class="drop-icon-lg">◈</div>
+      <div class="drop-title" id="drop-title">Drop demo here</div>
+      <div class="drop-sub" id="drop-sub">.dem files only</div>
+      <div class="drop-progress-wrap" id="drop-progress-wrap" hidden>
+        <div class="drop-progress-fill" id="drop-progress-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <main class="main" id="main">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">◈</div>
+      <div class="empty-label">No demo selected</div>
+      <div class="empty-sub">Pick a .dem file from the sidebar</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ── state ──
+let selectedDemo = null;
+let parsedResult = null;
+
+// ── boot ──
+loadDemos();
+
+async function loadDemos() {
+  const list = document.getElementById('demo-list');
+  try {
+    const demos = await api('GET', '/api/demos');
+    if (!demos.length) {
+      list.innerHTML = '<div class="sidebar-empty">No .dem files found in demos folder.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    for (const d of demos) {
+      const item = document.createElement('div');
+      item.className = 'demo-item';
+      item.dataset.name = d.name;
+      item.innerHTML = `
+        <div class="demo-name">${esc(d.name)}</div>
+        <div class="demo-meta">${fmtSize(d.size)}</div>
+      `;
+      item.addEventListener('click', () => selectDemo(d.name));
+      list.appendChild(item);
+    }
+  } catch (e) {
+    list.innerHTML = `<div class="sidebar-empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+async function selectDemo(name) {
+  if (selectedDemo === name) return;
+  selectedDemo = name;
+  parsedResult = null;
+
+  // update sidebar
+  document.querySelectorAll('.demo-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.name === name);
+  });
+
+  // show loading
+  setMain(`
+    <div class="loading">
+      <div class="spinner"></div>
+      <span>Parsing ${esc(name)}…</span>
+    </div>
+  `);
+
+  try {
+    const result = await api('POST', '/api/parse', { demo: name });
+    parsedResult = result;
+    renderDemo(name, result);
+  } catch (e) {
+    setMain(`<div style="color:var(--red);padding:40px 0;font-size:13px;">
+      Failed to parse demo: ${esc(e.message)}
+    </div>`);
+  }
+}
+
+function renderDemo(name, r) {
+  const main = document.getElementById('main');
+  const dur = fmtDuration(r.duration_seconds);
+  const tr = Math.round(r.tickrate) || 64;
+  const hl = r.highlights || [];
+
+  main.innerHTML = `
+    <div class="demo-header">
+      <div class="demo-header-name">${esc(name)}</div>
+      <div class="demo-tags">
+        <span class="tag">${esc(r.map_name) || 'unknown map'}</span>
+        <span class="tag">${tr} tick</span>
+        <span class="tag">${dur}</span>
+        <span class="tag">${r.kill_count} kills</span>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <span class="section-title">Highlights</span>
+      <span class="section-count">${hl.length}</span>
+    </div>
+
+    <div class="highlights" id="highlights">
+      ${hl.length ? hl.map(h => renderHighlight(h)).join('') : '<div class="no-highlights">No multi-kills detected.</div>'}
+    </div>
+
+    <hr>
+
+    <div class="clips-section">
+      <div class="section-header">
+        <span class="section-title">Clips</span>
+      </div>
+      <div class="clip-list" id="clip-list">
+        <div class="sidebar-empty" style="padding:0 0 8px;">Loading…</div>
+      </div>
+    </div>
+  `;
+
+  loadClips();
+  attachRenderListeners();
+}
+
+function renderHighlight(h) {
+  const klass = badgeClass(h.kill_count);
+  const label = killLabel(h.kill_count);
+  const feed = (h.kills || []).map(k => `
+    <div class="kill-row">
+      <span class="kill-killer">${esc(k.killer_name)}</span>
+      <span class="kill-arrow">→</span>
+      <span class="kill-victim">${esc(k.victim_name)}</span>
+      ${k.is_headshot ? '<span class="kill-hs">HS</span>' : ''}
+      <span class="kill-weapon">${esc(k.weapon)}</span>
+    </div>
+  `).join('');
+
+  return `
+    <div class="hl-card" data-id="${h.id}">
+      <div class="hl-top">
+        <div class="kill-badge ${klass}">${label}</div>
+        <div class="hl-info">
+          <div class="hl-player">${esc(h.player_name)}</div>
+          <div class="hl-ticks">ticks ${h.start_tick.toLocaleString()} – ${h.end_tick.toLocaleString()}</div>
+        </div>
+        <div class="hl-actions">
+          <div id="action-${h.id}">
+            <button class="btn btn-primary btn-sm render-btn" data-id="${h.id}">
+              Render clip
+            </button>
+          </div>
+        </div>
+      </div>
+      ${feed ? `<div class="hl-feed">${feed}</div>` : ''}
+    </div>
+  `;
+}
+
+function attachRenderListeners() {
+  document.querySelectorAll('.render-btn').forEach(btn => {
+    btn.addEventListener('click', () => openFilePicker(parseInt(btn.dataset.id)));
+  });
+}
+
+function openFilePicker(highlightId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'video/*,.mp4,.mov,.avi,.mkv,.webm';
+  input.onchange = () => {
+    if (input.files[0]) uploadAndCut(highlightId, input.files[0]);
+  };
+  input.click();
+}
+
+function uploadAndCut(highlightId, file) {
+  const actionEl = document.getElementById(`action-${highlightId}`);
+
+  actionEl.innerHTML = `
+    <div class="upload-progress">
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill-${highlightId}"></div></div>
+      <span class="progress-label" id="prog-label-${highlightId}">0%</span>
+    </div>
+  `;
+
+  const form = new FormData();
+  form.append('demo', selectedDemo);
+  form.append('highlight_id', String(highlightId));
+  form.append('video', file);
+
+  const xhr = new XMLHttpRequest();
+
+  xhr.upload.onprogress = (e) => {
+    if (!e.lengthComputable) return;
+    const pct = Math.round(e.loaded / e.total * 100);
+    const fill = document.getElementById(`prog-fill-${highlightId}`);
+    const label = document.getElementById(`prog-label-${highlightId}`);
+    if (fill) fill.style.width = pct + '%';
+    if (label) label.textContent = pct + '%';
+  };
+
+  xhr.upload.onloadend = () => {
+    // Upload done; FFmpeg cut is now running (near-instant with -c copy).
+    const label = document.getElementById(`prog-label-${highlightId}`);
+    if (label) label.textContent = '…';
+    const fill = document.getElementById(`prog-fill-${highlightId}`);
+    if (fill) fill.style.width = '100%';
+  };
+
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      const data = JSON.parse(xhr.responseText);
+      actionEl.innerHTML = `
+        <a class="btn btn-download btn-sm" href="/clips/${encodeURIComponent(data.clip_file)}" download>
+          ↓ Download
+        </a>
+      `;
+      loadClips();
+    } else {
+      let msg = 'unknown error';
+      try { msg = JSON.parse(xhr.responseText).error; } catch (_) {}
+      actionEl.innerHTML = `
+        <div class="job-status job-error" title="${esc(msg)}">Failed</div>
+        <button class="btn btn-ghost btn-sm" style="margin-left:6px"
+          onclick="openFilePicker(${highlightId})">Retry</button>
+      `;
+    }
+  };
+
+  xhr.onerror = () => {
+    actionEl.innerHTML = `
+      <div class="job-status job-error">Upload failed</div>
+      <button class="btn btn-ghost btn-sm" style="margin-left:6px"
+        onclick="openFilePicker(${highlightId})">Retry</button>
+    `;
+  };
+
+  xhr.open('POST', '/api/render');
+  xhr.send(form);
+}
+
+async function loadClips() {
+  const el = document.getElementById('clip-list');
+  if (!el) return;
+  try {
+    const clips = await api('GET', '/api/clips');
+    if (!clips.length) {
+      el.innerHTML = '<div class="sidebar-empty" style="padding:0 0 8px;color:var(--dim);">No clips yet.</div>';
+      return;
+    }
+    el.innerHTML = clips.map(c => `
+      <div class="clip-item">
+        <span class="clip-icon">▶</span>
+        <div class="clip-info">
+          <div class="clip-name">${esc(c.name)}</div>
+          <div class="clip-size">${fmtSize(c.size)}</div>
+        </div>
+        <a class="btn btn-ghost btn-sm" href="/clips/${encodeURIComponent(c.name)}" download>↓</a>
+      </div>
+    `).join('');
+  } catch (_) {
+    el.innerHTML = '';
+  }
+}
+
+// ── demo upload ──
+
+document.getElementById('demo-file-input').addEventListener('change', e => {
+  if (e.target.files[0]) uploadDemo(e.target.files[0]);
+  e.target.value = '';
+});
+
+// Global drag-and-drop: show overlay whenever anything is dragged over the window.
+let dragDepth = 0;
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  dragDepth++;
+  if (dragDepth === 1) overlayState('hovering');
+});
+window.addEventListener('dragleave', () => {
+  dragDepth--;
+  if (dragDepth === 0) overlayHide();
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  dragDepth = 0;
+  const file = e.dataTransfer?.files[0];
+  if (file) uploadDemo(file);
+  else overlayHide();
+});
+
+// Click overlay to dismiss when in error/done state.
+document.getElementById('drop-overlay').addEventListener('click', () => {
+  if (!document.getElementById('drop-overlay').hasAttribute('hidden')) {
+    overlayHide();
+  }
+});
+
+function overlayState(mode) {
+  const overlay = document.getElementById('drop-overlay');
+  const box     = document.getElementById('drop-box');
+  overlay.removeAttribute('hidden');
+  if (mode === 'hovering') {
+    box.classList.add('hovering');
+    document.getElementById('drop-title').textContent = 'Drop demo here';
+    document.getElementById('drop-sub').textContent = '.dem files only';
+    document.getElementById('drop-progress-wrap').setAttribute('hidden', '');
+  }
+}
+
+function overlayUploading(filename, totalSize) {
+  document.getElementById('drop-overlay').removeAttribute('hidden');
+  document.getElementById('drop-box').classList.remove('hovering');
+  document.getElementById('drop-title').textContent = filename;
+  document.getElementById('drop-sub').textContent = fmtSize(totalSize);
+  document.getElementById('drop-progress-wrap').removeAttribute('hidden');
+  document.getElementById('drop-progress-fill').style.width = '0%';
+}
+
+function overlayHide() {
+  document.getElementById('drop-overlay').setAttribute('hidden', '');
+  document.getElementById('drop-box').classList.remove('hovering');
+  dragDepth = 0;
+}
+
+function uploadDemo(file) {
+  if (!file.name.toLowerCase().endsWith('.dem')) {
+    document.getElementById('drop-overlay').removeAttribute('hidden');
+    document.getElementById('drop-box').classList.remove('hovering');
+    document.getElementById('drop-title').textContent = 'Wrong file type';
+    document.getElementById('drop-sub').textContent = `${esc(file.name)} is not a .dem file`;
+    document.getElementById('drop-progress-wrap').setAttribute('hidden', '');
+    setTimeout(overlayHide, 2500);
+    return;
+  }
+
+  overlayUploading(file.name, file.size);
+
+  const form = new FormData();
+  form.append('demo', file);
+
+  const xhr = new XMLHttpRequest();
+
+  xhr.upload.onprogress = e => {
+    if (!e.lengthComputable) return;
+    const pct = Math.round(e.loaded / e.total * 100);
+    document.getElementById('drop-progress-fill').style.width = pct + '%';
+    document.getElementById('drop-sub').textContent =
+      `${fmtSize(e.loaded)} / ${fmtSize(e.total)}`;
+  };
+
+  xhr.onload = () => {
+    if (xhr.status === 200) {
+      document.getElementById('drop-progress-fill').style.width = '100%';
+      document.getElementById('drop-title').textContent = 'Upload complete';
+      document.getElementById('drop-sub').textContent = file.name;
+      setTimeout(overlayHide, 1200);
+      loadDemos();
+    } else {
+      let msg = 'Upload failed';
+      try { msg = JSON.parse(xhr.responseText).error; } catch (_) {}
+      document.getElementById('drop-title').textContent = 'Upload failed';
+      document.getElementById('drop-sub').textContent = msg;
+      document.getElementById('drop-progress-wrap').setAttribute('hidden', '');
+      setTimeout(overlayHide, 3500);
+    }
+  };
+
+  xhr.onerror = () => {
+    document.getElementById('drop-title').textContent = 'Network error';
+    document.getElementById('drop-sub').textContent = 'Could not reach server';
+    setTimeout(overlayHide, 3000);
+  };
+
+  xhr.open('POST', '/api/demos/upload');
+  xhr.send(form);
+}
+
+// ── utilities ──
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+function setMain(html) {
+  document.getElementById('main').innerHTML = html;
+}
+
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+}
+
+function fmtDuration(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function badgeClass(n) {
+  if (n >= 5) return 'badge-5k';
+  if (n === 4) return 'badge-4k';
+  if (n === 3) return 'badge-3k';
+  return 'badge-2k';
+}
+
+function killLabel(n) {
+  if (n >= 5) return 'ACE';
+  return n + 'K';
+}
+</script>
+</body>
+</html>
